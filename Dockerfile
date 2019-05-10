@@ -9,4 +9,12 @@ WORKDIR /webhooksExplorer
 ADD ./webhooksExplorer /webhooksExplorer
 RUN pip install --upgrade pip
 RUN pip install -r /config/requirements.pip
-CMD python manage.py collectstatic --no-input;python manage.py migrate; gunicorn webhooksExplorer.wsgi -b 0.0.0.0:8000; while true; do python webhookProcessor.py ;sleep 5; done
+RUN apt-get update
+RUN apt-get install -y nginx
+RUN apt-get clean
+RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN echo "daemon off;" >> /etc/nginx/nginx.conf
+ADD /config/nginx/mydjango.conf /etc/nginx/sites-available/mydjango
+RUN ln -s /etc/nginx/sites-available/mydjango /etc/nginx/sites-enabled
+EXPOSE 8000
+CMD python manage.py collectstatic --no-input;python manage.py migrate; gunicorn --daemon --workers 3 --bind unix:/webhooksExplorer/webhooksExplorer.sock webhooksExplorer.wsgi;sleep 5; nginx
